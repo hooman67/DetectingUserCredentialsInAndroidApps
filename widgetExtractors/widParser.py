@@ -16,9 +16,6 @@ class feature:
 	#features used for classification
 	isTypeTextEdit = -1
 	hasText = -1
-	hasHint = -1
-	isHintPassword = -1
-	isHintUsername = -1
 	isClickable = -1
 	isFocusable = -1
 	isVisible = -1
@@ -203,7 +200,7 @@ for ind in range(len(wholeFileArr)):
 
 
 #################### Writing the identified elements to File ##########################
-outFile_csv.write("Label,Type,ID,xLoc,yLoc,width,drwaingLocX,drwaingLocY,drwaingLocZ,isTypeTextEdit,hasText,hasHint,isHintUsername,isHintPassword,isVisible,isFocusable,isClickable,hasOverlappingRendering,mPrivateFlags,mViewFlags,mPrivateFlags_DRAWN,hasFocus" + '\n')
+outFile_csv.write("Label,Type,ID,xLoc,yLoc,width,drwaingLocX,drwaingLocY,drwaingLocZ,isTypeTextEdit,hasText,isVisible,isFocusable,isClickable,hasOverlappingRendering,mPrivateFlags,mViewFlags,mPrivateFlags_DRAWN,hasFocus" + '\n')
 for el in elementsFoundSoFar:
 
 	outFile_csv.write(str(el.classificationResult) + ',')
@@ -218,9 +215,6 @@ for el in elementsFoundSoFar:
 				
 	outFile_csv.write(str(el.isTypeTextEdit) + ',')
 	outFile_csv.write(str(el.hasText) + ',')
-	outFile_csv.write(str(el.hasHint) + ',')
-	outFile_csv.write(str(el.isHintUsername) + ',')
-	outFile_csv.write(str(el.isHintPassword) + ',')
 	outFile_csv.write(str(el.isVisible) + ',')
 	outFile_csv.write(str(el.isFocusable) + ',')
 	outFile_csv.write(str(el.isClickable) + ',')
