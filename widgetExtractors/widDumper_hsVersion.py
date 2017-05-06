@@ -48,16 +48,7 @@ def getWindowHash():
 
 
 #Function for retriving the typeID of the currently selected widget
-def getSelectedWidgetsID():
-	#get screen dump
-    dumResults=subprocess.Popen("adb shell dumpsys input_method", shell=False, stdout=subprocess.PIPE)
-    dumResults=dumResults.stdout.read()
-    time.sleep(3)
-
-    hints = re.findall('hintText=\S*',str(dumResults))
-    if hints != 0:
-        print("Found a hint: "+ hints[0] + "\n")
-    
+def getSelectedWidgetsID(dumResults):
     #find selected widget's ID
     itemTypeLine = re.findall('mServedView=\S*',str(dumResults))
     out = ""
@@ -75,12 +66,12 @@ for line in afttFile:
 
     currentPackageName=line.strip("\n")
     command_start="adb shell monkey -p " + currentPackageName + " 1"
-    print ("Current Package Name: "+currentPackageName + "\n")
+    print ("\nCurrent Package Name: "+currentPackageName + "\n")
     #print("Command to send:  "+ command_start)
 
     result=subprocess.Popen(command_start, shell=False, stdout=subprocess.PIPE)
     result=result.stdout.read()
-    input("Ones the app is opened press Enter to continue...\n")
+    input("Ones happy with the opened window press Enter to continue...\n")
 
 
 ###################communication start#############################################
@@ -102,7 +93,7 @@ for line in afttFile:
         hashId=getWindowHash()
         hsTe = 'DUMP %s\n'%hashId;  
         s.sendall(hsTe.encode(encoding='utf_8'))
-        print ("dump Command sent")
+        print ("all dump Commands sent")
     
         s.settimeout(360)
         data=''
@@ -161,6 +152,7 @@ class feature:
 	layoutWidth = -1
 	isWidthZero = -1
 	hasInlineImage = 0
+	hintText = "none"
 
 	#features used for classification
 	isTypeTextEdit = -1
@@ -361,31 +353,55 @@ for ind in range(len(wholeFileArr)):
 #######################################################################################
 #********************** Labeling SECTION *********************************************#
 #######################################################################################
-input("Select the UserName field and press Enter to label it...\n")
+input("Select the UserName field and press Enter to label it...")
 
-fullItemType = getSelectedWidgetsID()
+#get screen dump
+dumResults=subprocess.Popen("adb shell dumpsys input_method", shell=False, stdout=subprocess.PIPE)
+dumResults=dumResults.stdout.read()
+time.sleep(3)
+
+hints = re.findall('hintText=\S*',str(dumResults))
+if hints != 0:
+	print("\nFound a hint: "+ hints[0] + "\n")
+
+fullItemType = getSelectedWidgetsID(dumResults)
 
 #find the element corresponding to the ID and mark the results
 if fullItemType != "":
 	for elem in elementsFoundSoFar:
 		if elem.ftype == fullItemType:
 			elem.lebel = 2
+			hintsp = re.split('=',hints[0])
+			if len(hintsp) > 0:
+				elem.hintText = hintsp[1]
 
 
-input("Select the Password field and press Enter to label it...\n")
+input("Select the Password field and press Enter to label it...")
 
-fullItemType = getSelectedWidgetsID()
+#get screen dump
+dumResults=subprocess.Popen("adb shell dumpsys input_method", shell=False, stdout=subprocess.PIPE)
+dumResults=dumResults.stdout.read()
+time.sleep(3)
+
+hints = re.findall('hintText=\S*',str(dumResults))
+if hints != 0:
+	print("\nFound a hint: "+ hints[0] + "\n")
+
+fullItemType = getSelectedWidgetsID(dumResults)
 
 #find the element corresponding to the ID and mark the results
 if fullItemType != "":
 	for elem in elementsFoundSoFar:
 		if elem.ftype == fullItemType:
 			elem.lebel = 1
+			hintsp = re.split('=',hints[0])
+			if len(hintsp) > 0:
+				elem.hintText = hintsp[1]
 
 
-print("Saving the result for " + currentPackageName + "\n")
+print("Savings the results for " + currentPackageName + "\n")
 
-outFile_csv.write("Label,Type,ID,xLoc,yLoc,width,isWidthZero,hasInlineImage,isTypeEditText,isTypeTextView,isTypeAutoComplete,isIdUsername,isIdPassword,hasText,isVisible,isFocusable,isClickable,hasOverlappingRendering,mPrivateFlags,mViewFlags,mPrivateFlags_DRAWN" + '\n')
+outFile_csv.write("Label,Type,ID,xLoc,yLoc,width,isWidthZero,hasInlineImage,hintText,isTypeEditText,isTypeTextView,isTypeAutoComplete,isIdUsername,isIdPassword,hasText,isVisible,isFocusable,isClickable,hasOverlappingRendering,mPrivateFlags,mViewFlags,mPrivateFlags_DRAWN" + '\n')
 for el in elementsFoundSoFar:
 
 	outFile_csv.write(str(el.lebel) + ',')
@@ -397,6 +413,7 @@ for el in elementsFoundSoFar:
 
 	outFile_csv.write(str(el.isWidthZero) + ',')
 	outFile_csv.write(str(el.hasInlineImage) + ',')
+	outFile_csv.write(str(el.hintText) + ',')
 	outFile_csv.write(str(el.isTypeTextEdit) + ',')
 	outFile_csv.write(str(el.isTypeTextView) + ',')
 	outFile_csv.write(str(el.isTypeAutoComplete) + ',')
