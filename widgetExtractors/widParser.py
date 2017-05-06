@@ -51,7 +51,7 @@ featuresToKeep = [
 
 
 ########################### segmenting the file #######################################
-srcFile=open("AFTT.txt", "r")
+srcFile=open("PackageNames.txt", "r")
 outFile=open("segmentedFile.txt","w")
 
 #you  want  android.widget.EditText at the begining of the line

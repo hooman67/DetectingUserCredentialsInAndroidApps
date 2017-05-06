@@ -3,7 +3,7 @@
 #######################################################################################
 import time, subprocess, socket, re
 
-afttFile=open("AminPackageNames.txt", "r")
+afttFile=open("PackageNames.txt", "r")
 
 fileName=""
 currentPackageName=""

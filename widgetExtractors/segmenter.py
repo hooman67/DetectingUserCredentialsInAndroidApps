@@ -1,7 +1,7 @@
 import time, subprocess, socket, re
 
 
-srcFile=open("AFTT.txt", "r")
+srcFile=open("PackageNames.txt", "r")
 outFile=open("segmentedFile2.txt","w")
 
 #you  want  android.widget.EditText at the begining of the line
