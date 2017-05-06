@@ -53,6 +53,10 @@ def getSelectedWidgetsID():
     dumResults=subprocess.Popen("adb shell dumpsys input_method", shell=False, stdout=subprocess.PIPE)
     dumResults=dumResults.stdout.read()
     time.sleep(3)
+
+    hints = re.findall('hintText=\S*',str(dumResults))
+    if hints != 0:
+        print("Found a hint: "+ hints[0] + "\n")
     
     #find selected widget's ID
     itemTypeLine = re.findall('mServedView=\S*',str(dumResults))
@@ -71,14 +75,12 @@ for line in afttFile:
 
     currentPackageName=line.strip("\n")
     command_start="adb shell monkey -p " + currentPackageName + " 1"
-    print ("Current Package Name: "+currentPackageName)
+    print ("Current Package Name: "+currentPackageName + "\n")
     #print("Command to send:  "+ command_start)
 
     result=subprocess.Popen(command_start, shell=False, stdout=subprocess.PIPE)
     result=result.stdout.read()
-    input("Press Enter to continue...")
-    #time.sleep(10)
-
+    input("Ones the app is opened press Enter to continue...\n")
 
 
 ###################communication start#############################################
@@ -106,7 +108,7 @@ for line in afttFile:
         data=''
         t0 = time.time()            
     
-        print ("inside reading loop")
+        print ("Listening for replies")
         while True:
             datum=s.recv(32*1024)
             #print ("Packet: "+str(datum))
@@ -157,23 +159,24 @@ class feature:
 	xLocOnScreen = -1
 	yLocOnScreen = -1
 	layoutWidth = -1
-	drawingX = -1
-	drawingY = -1
-	drawingZ = -1
+	isWidthZero = -1
+	hasInlineImage = 0
 
 	#features used for classification
 	isTypeTextEdit = -1
+	isTypeTextView = -1
+	isTypeAutoComplete = -1
+	isIdUsername = -1
+	isIdPassword = -1
 	hasText = -1
 	isClickable = -1
 	isFocusable = -1
 	isVisible = -1
-
-	#other potential features
 	hasOverlappingRendering = -1
 	mPrivateFlags = -1
 	mViewFlags = -1
 	mPrivateFlags_DRAWN = -1
-	hasFocus = -1
+
 
 
 elementsFoundSoFar= []
@@ -183,7 +186,6 @@ featuresToKeep = [
 "mText",
 "isClickable",
 "isFocusable",
-"hasFocus()",
 "hasOverlappingRendering",
 "getVisibility",
 "mPrivateFlags",
@@ -191,10 +193,26 @@ featuresToKeep = [
 "mPrivateFlags_DRAWN",
 "getLocationOnScreen_x",
 "getLocationOnScreen_y",
-"layout:getWidth",
-"drawing:getX",
-"drawing:getY",
-"drawing:getZ"]
+"layout:getWidth"]
+
+userNameWords = [
+"username","UserName",
+"User","user",
+"email","Email",
+"account","Account",
+"Phone","phone",
+"login-id","login-ID","Login-Id","Login-ID",
+"login-name","login-Name","Login-Name","Login-Name",
+"login_id","login_ID","Login_Id","Login_ID",
+"login_name","login_Name","Login_Name","Login_Name",
+"loginName","LoginName",
+"LoginID","loginID","LoginId","loginId"
+]
+
+passwordWords = [
+"pass","Pass","pin", "Pin",
+"password","Password","passcode", "Passcode", "passCode", "pass_code"
+]
 #######################################################################################
 
 
@@ -243,6 +261,16 @@ for ind in range(len(wholeFileArr)):
 				else:
 					curFit.isTypeTextEdit = 0
 
+				if ("view" in w_type_temp or "View" in w_type_temp) and ("text" in w_type_temp or "Text" in w_type_temp):
+					curFit.isTypeTextView = 1
+				else:
+					curFit.isTypeTextView = 0
+
+				if ("auto" in w_type_temp or "Auto" in w_type_temp) and ("complete" in w_type_temp or "Complete" in w_type_temp):
+					curFit.isTypeAutoComplete = 1
+				else:
+					curFit.isTypeAutoComplete = 0
+
 			else:
 				if any(xxx in singleWidgetArr[indk] for xxx in featuresToKeep):
 					
@@ -252,28 +280,26 @@ for ind in range(len(wholeFileArr)):
 					singleProp = re.split('=', singleWidgetArr[indk])
 					prop = singleProp[0]
 
-					#print("prop: " + prop + "\n")
 
 					if prop == "mID" :
 						curFit.fId = value
+
+						if any(xx in value for xx in userNameWords):
+							curFit.isIdUsername = 1
+						else:
+							curFit.isIdUsername = 0
+
+						if any(x in value for x in passwordWords):
+							curFit.isIdPassword = 1
+						else:
+							curFit.isIdPassword = 0
+
 
 					if prop == "layout:getLocationOnScreen_x()" :
 						curFit.xLocOnScreen = value
 
 					if prop == "layout:getLocationOnScreen_y()" :
 						curFit.yLocOnScreen = value
-
-					if prop == "layout:getWidth()" :
-						curFit.layoutWidth = value
-
-					if prop == "drawing:getX()" :
-						curFit.drawingX = value
-
-					if prop == "drawing:getY()" :
-						curFit.drawingY = value
-
-					if prop == "drawing:getZ()" :
-						curFit.drawingZ = value
 
 					if prop == "mViewFlags" :
 						curFit.mViewFlags = value
@@ -285,17 +311,18 @@ for ind in range(len(wholeFileArr)):
 						curFit.mPrivateFlags_DRAWN = value
 
 
+					if prop == "layout:getWidth()" :
+						curFit.layoutWidth = value
+						if value is '0':
+							curFit.isWidthZero = 1
+						else:
+							curFit.isWidthZero = 0
+
 					if prop == "getVisibility()" :
 						if value == "VISIBLE" or value == "VIS'b'IBLE":
 							curFit.isVisible = 1
 						else:
 							curFit.isVisible = 0
-
-					if prop == "focus:hasFocus()" :
-						if value == "true":
-							curFit.hasFocus = 1
-						else:
-							curFit.hasFocus = 0
 
 					if prop == "focus:isFocusable()" :
 						if value == "true":
@@ -334,7 +361,7 @@ for ind in range(len(wholeFileArr)):
 #######################################################################################
 #********************** Labeling SECTION *********************************************#
 #######################################################################################
-input("Select the UserName field and press Enter to label it...")
+input("Select the UserName field and press Enter to label it...\n")
 
 fullItemType = getSelectedWidgetsID()
 
@@ -345,7 +372,7 @@ if fullItemType != "":
 			elem.lebel = 2
 
 
-input("Select the Password field and press Enter to label it...")
+input("Select the Password field and press Enter to label it...\n")
 
 fullItemType = getSelectedWidgetsID()
 
@@ -358,7 +385,7 @@ if fullItemType != "":
 
 print("Saving the result for " + currentPackageName + "\n")
 
-outFile_csv.write("Label,Type,ID,xLoc,yLoc,width,drwaingLocX,drwaingLocY,drwaingLocZ,isTypeTextEdit,hasText,isVisible,isFocusable,isClickable,hasOverlappingRendering,mPrivateFlags,mViewFlags,mPrivateFlags_DRAWN,hasFocus" + '\n')
+outFile_csv.write("Label,Type,ID,xLoc,yLoc,width,isWidthZero,hasInlineImage,isTypeEditText,isTypeTextView,isTypeAutoComplete,isIdUsername,isIdPassword,hasText,isVisible,isFocusable,isClickable,hasOverlappingRendering,mPrivateFlags,mViewFlags,mPrivateFlags_DRAWN" + '\n')
 for el in elementsFoundSoFar:
 
 	outFile_csv.write(str(el.lebel) + ',')
@@ -367,21 +394,24 @@ for el in elementsFoundSoFar:
 	outFile_csv.write(str(el.xLocOnScreen) + ',')
 	outFile_csv.write(str(el.yLocOnScreen) + ',')
 	outFile_csv.write(str(el.layoutWidth) + ',')
-	outFile_csv.write(str(el.drawingX) + ',')
-	outFile_csv.write(str(el.drawingY) + ',')
-	outFile_csv.write(str(el.drawingZ) + ',')
-				
+
+	outFile_csv.write(str(el.isWidthZero) + ',')
+	outFile_csv.write(str(el.hasInlineImage) + ',')
 	outFile_csv.write(str(el.isTypeTextEdit) + ',')
+	outFile_csv.write(str(el.isTypeTextView) + ',')
+	outFile_csv.write(str(el.isTypeAutoComplete) + ',')
+	outFile_csv.write(str(el.isIdUsername) + ',')
+	outFile_csv.write(str(el.isIdPassword) + ',')
 	outFile_csv.write(str(el.hasText) + ',')
 	outFile_csv.write(str(el.isVisible) + ',')
 	outFile_csv.write(str(el.isFocusable) + ',')
 	outFile_csv.write(str(el.isClickable) + ',')
-				
 	outFile_csv.write(str(el.hasOverlappingRendering) + ',')
 	outFile_csv.write(str(el.mPrivateFlags) + ',')
 	outFile_csv.write(str(el.mViewFlags) + ',')
 	outFile_csv.write(str(el.mPrivateFlags_DRAWN) + ',')
-	outFile_csv.write(str(el.hasFocus) + '\n')
+
+	outFile_csv.write('\n')
 
 outFile_csv.close()
 
