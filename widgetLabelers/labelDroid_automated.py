@@ -15,7 +15,7 @@ LONG_SLEEP_TIME = 1
 import time, subprocess, socket, re
 
 labeled = 0
-afttFile=open("AminPackageNames.txt", "r")
+afttFile=open("PackageNames.txt", "r")
 
 fileName=""
 currentPackageName=""
